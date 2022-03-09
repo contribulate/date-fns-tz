@@ -4,7 +4,14 @@
  */
 export default function tzTokenizeDate(date, timeZone) {
   var dtf = getDateTimeFormat(timeZone)
-  return dtf.formatToParts ? partsOffset(dtf, date) : hackyOffset(dtf, date)
+  try {
+    return dtf.formatToParts ? partsOffset(dtf, date) : hackyOffset(dtf, date)
+  } catch (error) {
+    if (error instanceof RangeError) {
+      return [NaN]
+    }
+    throw error
+  }
 }
 
 var typeToPos = {
@@ -18,31 +25,46 @@ var typeToPos = {
 }
 
 function partsOffset(dtf, date) {
-  try {
-    var formatted = dtf.formatToParts(date)
-    var filled = []
-    for (var i = 0; i < formatted.length; i++) {
-      var pos = typeToPos[formatted[i].type]
+  var formatted = dtf.formatToParts(date)
+  var filled = []
+  var era = 'A'
+  var year = 0
+  for (var i = 0; i < formatted.length; i++) {
+    var part = formatted[i]
+    var type = part.type
+    switch (type) {
+      case 'era':
+        era = part.value
+        break
+      case 'year':
+        year = parseInt(part.value, 10)
+        break
+      case 'literal':
+        break
+      default:
+        filled[typeToPos[type]] = parseInt(part.value, 10)
+        break
+    }
+  }
+  filled[typeToPos['year']] = formattedEraYearToYearValue(era, year)
+  return filled
+}
 
-      if (pos >= 0) {
-        filled[pos] = parseInt(formatted[i].value, 10)
-      }
-    }
-    return filled
-  } catch (error) {
-    if (error instanceof RangeError) {
-      return [NaN]
-    }
-    throw error
+function formattedEraYearToYearValue(era, year) {
+  switch (era) {
+    case 'A':
+      return year
+    default:
+      // 'B'
+      return 1 - year
   }
 }
 
 function hackyOffset(dtf, date) {
   var formatted = dtf.format(date).replace(/\u200E/g, '')
-  var parsed = /(\d+)\/(\d+)\/(\d+),? (\d+):(\d+):(\d+)\.(\d+)/.exec(formatted)
-  // var [, fMonth, fDay, fYear, fHour, fMinute, fSecond] = parsed
-  // return [fYear, fMonth, fDay, fHour, fMinute, fSecond]
-  return [parsed[3], parsed[1], parsed[2], parsed[4], parsed[5], parsed[6], parsed[7]]
+  var parsed = /(\d+)\/(\d+)\/(\d+) ([AB]),? (\d+):(\d+):(\d+)\.(\d+)/.exec(formatted)
+  var yearValue = formattedEraYearToYearValue(parsed[4], parsed[3])
+  return [yearValue, parsed[1], parsed[2], parsed[5], parsed[6], parsed[7], parsed[8]]
 }
 
 // Get a cached Intl.DateTimeFormat instance for the IANA `timeZone`. This can be used
@@ -70,6 +92,7 @@ function getDateTimeFormat(timeZone) {
       ? new Intl.DateTimeFormat('en-US', {
           hour12: false,
           timeZone: timeZone,
+          era: 'narrow',
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
@@ -81,6 +104,7 @@ function getDateTimeFormat(timeZone) {
       : new Intl.DateTimeFormat('en-US', {
           hourCycle: 'h23',
           timeZone: timeZone,
+          era: 'narrow',
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',

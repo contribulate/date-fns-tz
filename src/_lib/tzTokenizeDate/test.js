@@ -20,9 +20,19 @@ describe('tzTokenizeDate', function () {
     assert.deepEqual(result, [2020, 1, 23, 0, 0, 0, 0])
   })
 
-  it('works with year < 100', function () {
+  it('works with 0 < year < 100', function () {
     var result = tzTokenizeDate(new Date('0099-01-01T00:00:00.000Z'), 'UTC')
     assert.deepEqual(result, [99, 1, 1, 0, 0, 0, 0])
+  })
+
+  it('works with year === 0', function () {
+    var result = tzTokenizeDate(new Date('0000-01-01T00:00:00.000Z'), 'UTC')
+    assert.deepEqual(result, [0, 1, 1, 0, 0, 0, 0])
+  })
+
+  it('works with year < 0', function () {
+    var result = tzTokenizeDate(new Date('-000001-01-01T00:00:00.000Z'), 'UTC')
+    assert.deepEqual(result, [-1, 1, 1, 0, 0, 0, 0])
   })
 
   it('returns milliseconds', function () {
