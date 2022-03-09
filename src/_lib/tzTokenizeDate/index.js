@@ -14,6 +14,7 @@ var typeToPos = {
   hour: 3,
   minute: 4,
   second: 5,
+  fractionalSecond: 6,
 }
 
 function partsOffset(dtf, date) {
@@ -38,10 +39,10 @@ function partsOffset(dtf, date) {
 
 function hackyOffset(dtf, date) {
   var formatted = dtf.format(date).replace(/\u200E/g, '')
-  var parsed = /(\d+)\/(\d+)\/(\d+),? (\d+):(\d+):(\d+)/.exec(formatted)
+  var parsed = /(\d+)\/(\d+)\/(\d+),? (\d+):(\d+):(\d+)\.(\d+)/.exec(formatted)
   // var [, fMonth, fDay, fYear, fHour, fMinute, fSecond] = parsed
   // return [fYear, fMonth, fDay, fHour, fMinute, fSecond]
-  return [parsed[3], parsed[1], parsed[2], parsed[4], parsed[5], parsed[6]]
+  return [parsed[3], parsed[1], parsed[2], parsed[4], parsed[5], parsed[6], parsed[7]]
 }
 
 // Get a cached Intl.DateTimeFormat instance for the IANA `timeZone`. This can be used
@@ -75,6 +76,7 @@ function getDateTimeFormat(timeZone) {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
+          fractionalSecondDigits: 3,
         })
       : new Intl.DateTimeFormat('en-US', {
           hourCycle: 'h23',
@@ -85,6 +87,7 @@ function getDateTimeFormat(timeZone) {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
+          fractionalSecondDigits: 3,
         })
   }
   return dtfCache[timeZone]
